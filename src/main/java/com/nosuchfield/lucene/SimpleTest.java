@@ -2,10 +2,7 @@ package com.nosuchfield.lucene;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.document.*;
-import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.index.IndexWriterConfig;
+import org.apache.lucene.index.*;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.*;
 import org.apache.lucene.store.Directory;
@@ -25,7 +22,29 @@ public class SimpleTest {
 
     public static void main(String[] args) throws Exception {
 //        new SimpleTest().run();
-        new SimpleTest().runBoolean();
+//        new SimpleTest().runBoolean();
+        new SimpleTest().runFilter();
+    }
+
+    /**
+     * 进行filter查询，filter查询不计算score
+     */
+    private void runFilter() throws Exception {
+        Directory directory = new RAMDirectory();
+        System.out.println("数据索引中...");
+        index(directory);
+        System.out.println("数据索引完毕！");
+
+        BooleanQuery.Builder builder = new BooleanQuery.Builder();
+        Query q = new TermQuery(new Term("title", "编程"));
+        builder.add(q, BooleanClause.Occur.FILTER);
+
+        int hitsPerPage = 10;
+        IndexReader reader = DirectoryReader.open(directory);
+        IndexSearcher searcher = new IndexSearcher(reader);
+        TopDocs docs = searcher.search(builder.build(), hitsPerPage);
+        ScoreDoc[] hits = docs.scoreDocs;
+        fetchDocs(searcher, hits);
     }
 
     /**
