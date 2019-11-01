@@ -1,21 +1,16 @@
 package com.nosuchfield.lucene;
 
 import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.StringField;
-import org.apache.lucene.document.TextField;
+import org.apache.lucene.document.*;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.queryparser.classic.QueryParser;
-import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.search.*;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.RAMDirectory;
+import org.apache.lucene.util.BytesRef;
 import org.wltea.analyzer.lucene.IKAnalyzer;
 
 import java.io.IOException;
@@ -60,6 +55,8 @@ public class SimpleTest {
     private void addDoc(IndexWriter w, String title, String isbn) throws IOException {
         Document doc = new Document();
         doc.add(new TextField("title", title, Field.Store.YES));
+        // DocValues用于排序
+        doc.add(new SortedDocValuesField("isbn", new BytesRef(isbn)));
         doc.add(new StringField("isbn", isbn, Field.Store.YES));
         w.addDocument(doc);
     }
@@ -82,7 +79,9 @@ public class SimpleTest {
         int hitsPerPage = 10;
         IndexReader reader = DirectoryReader.open(directory);
         IndexSearcher searcher = new IndexSearcher(reader);
-        TopDocs docs = searcher.search(q, hitsPerPage);
+        // 使用isbn进行排序
+        Sort sort = new Sort(new SortField("isbn", SortField.Type.STRING, false));
+        TopDocs docs = searcher.search(q, hitsPerPage, sort);
         ScoreDoc[] hits = docs.scoreDocs;
 
         System.out.println("Found " + hits.length + " hits.");
