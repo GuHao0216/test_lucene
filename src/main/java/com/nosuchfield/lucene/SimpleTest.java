@@ -24,9 +24,39 @@ import java.util.Scanner;
 public class SimpleTest {
 
     public static void main(String[] args) throws Exception {
-        new SimpleTest().run();
+//        new SimpleTest().run();
+        new SimpleTest().runBoolean();
     }
 
+    /**
+     * 执行boolean类型的查询
+     */
+    private void runBoolean() throws Exception {
+        Directory directory = new RAMDirectory();
+        System.out.println("数据索引中...");
+        index(directory);
+        System.out.println("数据索引完毕！");
+
+        BooleanQuery.Builder builder = new BooleanQuery.Builder();
+        Query q1 = new QueryParser("title", new IKAnalyzer()).parse("编程");
+        Query q2 = new QueryParser("title", new IKAnalyzer()).parse("网络");
+        builder.add(q1, BooleanClause.Occur.SHOULD);
+        builder.add(q2, BooleanClause.Occur.SHOULD);
+        // 最少需要两个符合条件的要求，在这里其实就是等价于MUST
+        builder.setMinimumNumberShouldMatch(2);
+
+
+        int hitsPerPage = 10;
+        IndexReader reader = DirectoryReader.open(directory);
+        IndexSearcher searcher = new IndexSearcher(reader);
+        TopDocs docs = searcher.search(builder.build(), hitsPerPage);
+        ScoreDoc[] hits = docs.scoreDocs;
+        fetchDocs(searcher, hits);
+    }
+
+    /**
+     * 执行普通的查询
+     */
     private void run() throws Exception {
         Directory directory = new RAMDirectory();
         System.out.println("数据索引中...");
@@ -83,7 +113,10 @@ public class SimpleTest {
         Sort sort = new Sort(new SortField("isbn", SortField.Type.STRING, false));
         TopDocs docs = searcher.search(q, hitsPerPage, sort);
         ScoreDoc[] hits = docs.scoreDocs;
+        fetchDocs(searcher, hits);
+    }
 
+    private void fetchDocs(IndexSearcher searcher, ScoreDoc[] hits) throws Exception {
         System.out.println("Found " + hits.length + " hits.");
         for (int i = 0; i < hits.length; ++i) {
             int docId = hits[i].doc;
